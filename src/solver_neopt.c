@@ -17,12 +17,12 @@ double* allocate_matrix(int N) {
 	return A;
 }
 
-double* multiply(int N, double *A, double *B, double *res) {	
+double* multiply_with_transpose(int N, double *A, double *B, double *res) {	
 	for (int i = 0; i < N; i++) {
 		for (int j = 0; j < N; j++) {
 			double sum = 0;
 			for (int k = 0; k < N; k++) {
-				sum += A[i * N + k] * B[k * N + j];
+				sum += A[i * N + k] * B[j * N + k];
 			}
 			res[i * N + j] = sum;
 		}
@@ -59,12 +59,10 @@ double* multiply_upper_triangular(int N, double *B, double *U, double *res) {
 	return res;
 }
 
-double* transpose_matrix(int N, double *A) {
-	double *At = allocate_matrix(N);
-	
+double* transpose_sup_triangular(int N, double *A, double *At) {
 	for (int i = 0; i < N; i++) {
-		for (int j = 0; j < N; j++) {
-			At[i * N + j] = A[j * N + i];
+		for (int j = i; j < N; j++) {
+			At[j * N + i] = A[i * N + j];
 		}
 	}
 
@@ -95,23 +93,16 @@ void print_matrix(int N, double *A) {
 double* my_solver(int N, double *A, double* B) {
 	printf("NEOPT SOLVER\n");
 
-	double *At = transpose_matrix(N, A);
-	double *AtB = allocate_matrix(N); 
-	AtB = multiply_lower_triangular(N, At, B, AtB);
-	// AtB = multiply(N, At, B, AtB);
+	double *At = transpose_sup_triangular(N, A, allocate_matrix(N));
+	double *AtB = multiply_lower_triangular(N, At, B, allocate_matrix(N));
+	double *BA = multiply_upper_triangular(N, B, A, allocate_matrix(N));
+	double *paranthesis = add_matrices(N, AtB, BA, allocate_matrix(N));
+	double *result = multiply_with_transpose(N, paranthesis, B, allocate_matrix(N));
 	
-	double *BA = allocate_matrix(N);
-	// BA = multiply(N, B, A, BA);
-	BA = multiply_upper_triangular(N, B, A, BA);
-
-	double *paranthesis = allocate_matrix(N);
-	paranthesis = add_matrices(N, AtB, BA, paranthesis);
-
-	double *Bt = transpose_matrix(N, B);
-	double *result = allocate_matrix(N);
-	result = multiply(N, paranthesis, Bt, result);
-
-	// print_matrix(N, result);
+	free(At);
+	free(AtB);
+	free(BA);
+	free(paranthesis);
 
 	return result;
 }
