@@ -17,6 +17,7 @@ valgrind --tool=memcheck --leak-check=full ./tema3_blas ../input/input_valgrind 
 echo "Running BLAS cachegrind"
 valgrind --tool=cachegrind --branch-sim=yes --cache-sim=yes ./tema3_blas ../input/input_valgrind > ../cache/blas.cache 2>&1
 
+rm out*
 echo "Running NEOPT..."
 ./tema3_neopt ../input/input >> output.txt
 echo "Comparing results..."
@@ -28,6 +29,7 @@ valgrind --tool=memcheck --leak-check=full ./tema3_neopt ../input/input_valgrind
 echo "Running NEOPT cachegrind"
 valgrind --tool=cachegrind --branch-sim=yes --cache-sim=yes ./tema3_neopt ../input/input_valgrind > ../cache/neopt.cache 2>&1
 
+rm out*
 echo "Running OPT..."
 ./tema3_opt_m ../input/input >> output.txt
 echo "Comparing results..."
