@@ -29,7 +29,6 @@ double* add_matrices(int N, double *A, double *B, double *res) {
  * Add your BLAS implementation here
  */
 double* my_solver(int N, double *A, double *B) {
-	printf("BLAS SOLVER\n");
 	// DGEMM - C = alpha * A * B + beta * C, matrice normale
 	// DTRMM - B = alpha * A * B, matrice triunghiulare
 	// At * B, A superior triangular

@@ -91,8 +91,6 @@ void print_matrix(int N, double *A) {
  * C = (At x B + B x A) x Bt
  */
 double* my_solver(int N, double *A, double* B) {
-	printf("NEOPT SOLVER\n");
-
 	double *At = transpose_sup_triangular(N, A, allocate_matrix(N));
 	double *AtB = multiply_lower_triangular(N, At, B, allocate_matrix(N));
 	double *BA = multiply_upper_triangular(N, B, A, allocate_matrix(N));
