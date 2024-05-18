@@ -1,95 +1,88 @@
 **Copyright (c) 2024, Cismaru-Diana Iuliana (331CA / 2023 - 2024)**
 
-# Optimizarea operatiilor cu matrici
-### ASC - Tema 3
+# Optimization of Matrix Multiplication
+### ASC - Assignment #3
 
-## Descriere
-> Tema consta in implementarea a trei variante de rezolvare pentru expresia matriceala
-> C = (A<sup>t</sup> x B + B x A) x B<sup>t</sup>, unde toate matricele sunt
-> patratice, de dimensiune N x N, iar matricea A este **superior triunghiulara**.
+## Description
+> The assignment consists of implementing three solutions for the matrix expression
+> C = (A<sup>t</sup> x B + B x A) x B<sup>t</sup>, where all matrices are square matrices
+> of size N x N, and matrix A is **upper triangular**.
 
-In toate variantele, matricele sunt alocate liniar in memorie. Rularea a fost 
-efectuata pe partitia `haswell`, folosind `sbatch`, iar compilarea a fost facuta 
-folosind `gcc-8.5.0`.
+In all 3 variants, the matrices are allocated linearly in memory. The execution was
+done on the `haswell` partition, using `sbatch`, and the compilation was done using
+`gcc-8.5.0`.
 
-## 1. Implementarea BLAS
-  In aceasta parte am folosit functii din biblioteca BLAS (Basic Linear Algebra 
-Subprograms) pentru a efectua diverse operatii cu matrici, dar si cu vectori.
+## 1. BLAS Implementation
+  In this part, I used functions from the BLAS (Basic Linear Algebra Subprograms)
+library to perform various operations with matrices, but also with vectors.
 
-  Functiile folosite sunt:
-  - `dgemm` - pentru inmultirea a doua matrici uzuale
-  - `dtrmm` - pentru inmultirea unei matrici cu o matrice triunghiulara
-  - `dcopy` - pentru copierea continutului unui vector in altul
-  - `daxpy` - pentru adunarea a doi vectori
+The functions used are:
+  - `dgemm` - for multiplying two general matrices
+  - `dtrmm` - for multiplying a matrix with a triangular matrix
+  - `dcopy` - for copying the contents of one vector to another
+  - `daxpy` - for adding two vectors
 
-Pentru inceput, am realizat inmultirea matricelor **A<sup>t</sup>** si **B**, pastrand rezultatul in
-variabila *A<sup>t</sup>B*. Am folosit functia `dtrmm`, deoarece matricea **A** este triunghiulara.
-Avand in vedere ca in calculul dorit matricea A apare sub forma ei transpusa, am 
-folosit parametrul **CblasTrans**. De asemenea, am folosit parametrul **CblasUpper**
-pentru a specifica ca matricea **A** este superior triunghiulara si parametrul
-**CblasLeft** pentru a specifica ca matricea **A** reprezinta partea stanga a 
-inmultirii. `dtrmm` face ca rezultatul inmultirii sa fie stocat in matricea din
-dreapta, motiv pentru care am alocat o copie a matricei **B** in **A<sup>t</sup>B**, folosind
-functia `dcopy`.
+Firstly, I performed the multiplication of matrices **A<sup>t</sup>** si **B**, storing
+the result in the variable *A<sup>t</sup>B*. I used the `dtrmm` function because matrix
+**A** is triangular. Given that in the desired calculation matrix **A** appears in its
+transposed form, I used the **CblasTrans** parameter. Additionally, I used the 
+**CblasUpper** parameter to specify that matrix **A** is upper triangular and the
+**CblasLeft** parameter to specify that matrix **A** represents the left side of the
+multiplication. `dtrmm` causes the multiplication result to be stored in the right-hand
+matrix, which is why I allocated a copy of matrix **B** into **A<sup>t</sup>B**, using
+the `dcopy` function.
 
-Analog, pentru realizarea inmultirii **B x A**, am folosit functia `dtrmm`, dar fara
-a mai fi nevoie sa transpun vreo matrice, iar parametrul **CblasRight** indica ca
-matricea **A** reprezinta partea dreapta a inmultirii. Rezultatul este stocat in **BA**.
+Similarly, to perform the multiplication **B x A**, I used the `dtrmm` function, but
+without the need to transpose any matrix, and the **CblasRight** parameter indicates
+that matrix **A** represents the right side of the multiplication. The result is stored
+in **BA**.
 
-Avand in vedere ca matricile rezultate **A<sup>t</sup>B** si **BA** sunt stocate liniar in memorie,
-am putut utiliza functia `daxpy` pentru a le aduna. Rezultatul se pastreaza in al
-doilea termen al adunarii, adica **BA**.
+Given that the matrices resulting from **A<sup>t</sup>B** and **BA** are stored linearly
+in memory, I was able to use the `daxpy` function to add them. The result is stored in
+the second term of the addition, i.e. **BA**.
 
-In final, am inmultit rezultatul anterior cu matricea **B** transpusa, folosind
-functia `dgemm`. Rezultatul final este stocat in matricea **C**.
+Finally, I multiplied the previous result with the transposed matrix **B**, using the
+`dgemm` function. The final result is stored in matrix **C**.
 
-## 2. Implementarea NEOPTimizata
-  Varianta neoptimizata presupune un calcul brut al fiecarei operatii, fara a se
-folosii artificii avansate pentru a eficientiza accesul la memorie.
+## 2. Unoptimized Implementation
+   The unoptimized version involves a brute calculation of each operation, without using
+advanced tricks to optimize memory access.
 
-  Pentru inceput, transpunerea matricei triunghiulare **A** se face in functia
-`transpose_upper_triangular`, in care evitam operatiile inutile prin alocarea
-matricei **A<sup>t</sup>** prin `calloc` si prin copierea doar a elementelor de deasupra diagonalei
-din matricea A.
+   To begin with, the transposition of the upper triangular matrix **A** is done in the
+`transpose_upper_triangular` function, avoiding unnecessary operations by allocating
+the matrix **A<sup>t</sup>** through `calloc` and by copying only the elements above
+the diagonal from matrix **A**.
 
-  Functia de adunare a doua matrici `add_matrices` presupune suma elementelor
-corespondente din cele doua matrici, stocand rezultatul intr-o noua matrice.
+   The addition of two matrices `add_matrices` involves the sum of the corresponding
+elements from the two matrices, storing the result in a new matrix.
 
-  Inmultirile matricilor se realizeaza in mod clasic, folosind 3 for-uri imbricate,
-in care se calculeaza suma produselor elementelor de pe fiecare linie si coloana, 
-dupa formula `c[i][j] = a[i][k] * b[k][j]`, cu mentiunea ca matricele sunt alocate
-liniar in memorie, formula devenind `c[i * N + j] = a[i * N + k] * b[k * N + j]`.
-Totusi, cele 3 inmultiri necesare au obtinut implementari distincte, fiind
-diferentiate de tipul matricilor implicate. Astfel, avem urmatoarele cazuri:
+   The multiplication of matrices is done in the classic way, using 3 nested loops,
+in which the sum of the products of the elements on each line and column is calculated,
+according to the formula `c[i][j] = a[i][k] * b[k][j]`, with the mention that the matrices
+are allocated linearly in memory, the formula becoming `c[i * N + j] = a[i * N + k] * b[k * N + j]`. However, the 3 necessary multiplications have obtained distinct
+implementations, being differentiated by the type of matrices involved. Thus, we have the following cases:
+   - **A<sup>t</sup> x B** - the function `multiply_lower_triangular` is used, because,
+by transposing, matrix **A<sup>t</sup>** becomes a lower triangular matrix. Thus, the
+multiplication with the elements below the main diagonal of matrix **A** is avoided, by
+modifying the limits of the inner loop, in which **k** will go only up to **i** inclusive
+- **B x A** - the function `multiply_upper_triangular` is used, analogous to the previous
+case, but **k** will go only up to **j** inclusive
+- **(A<sup>t</sup> x B + B x A) x B<sup>t</sup>** - the function `multiply_with_transpose`
+is used, which uses the classic version, but in which matrix **B** is transposed on the spot: thus, instead of accessing the elements of matrix **B** as `B[k][j]`, they are accessed as `B[j][k]`.
 
-* **A<sup>t</sup> x B** utilizeaza functia `multiply_lower_triangular`, deoarece, prin transpunere,
-matricea **A<sup>t</sup>** devine una inferior triunghiulara. Astfel, se evita inmultirea cu 
-elementele de sub diagonala principala a matricei A, care sunt 0, prin modificarea
-limitelor for-ului interior, in care **k** va merge doar pana la **i** inclusiv
-
-* **B x A** utilizeaza functia `multiply_upper_triangular`, analog cu cazul anterior,
-dar **k** va merge doar pana la **j** inclusiv
-
-* **(A<sup>t</sup> x B + B x A) x B<sup>t</sup>** utilizeaza functia `multiply_with_transpose`, care
-utilizeaza varianta clasica, dar in care matricea **B** este transpusa pe loc:
-deci, in loc sa acceseze elementele matricei **B** ca `B[k][j]`, se acceseaza ca
-`B[j][k]`.
-
-## 3. Implementarea OPTimizata
-- descrierea implementarii
-
-Ideea din spatele tuturor optimizarilor porneste de la secventa de cod prezentata
-in laboraorul 9, prin care se eficientizeaza accesul la memorie prin intermediul
-pointerilor. Astfel, se evita accesul vectorial prin dereferentiere:
+## 3. Optimized Implementation
+   The idea behind all optimizations starts from the code sequence presented in laboratory
+9, through which memory access is optimized through pointers. Thus, vectorial access is
+avoided by dereferencing:
 
 ```
-for(i = 0; i < N; i++){
+for (i = 0; i < N; i++) {
 	double *orig_pa = &a[i][0];
-	for(j = 0; j < N; j++){
+	for (j = 0; j < N; j++) {
 		double *pa = orig_pa;
 		double *pb = &b[0][j];
 		register double sum = 0;
-		for(k = 0; k < N; k++){
+		for (k = 0; k < N; k++) {
 			sum += *pa * *pb;
 			pa++;
 			pb += N;
@@ -98,41 +91,40 @@ for(i = 0; i < N; i++){
 	}
 }
 ```
+My implementation adapts the code above to matrices that are allocated linearly in memory
+and maintains a pointer even for the result matrix. Since pointers are used repeatedly
+in calculations from for loops, they are declared as **register**, to send a signal to
+the compiler to keep them in the processor registers for much faster access. However, to
+avoid exhausting the CPU registers, the declarations were made at the beginning of the
+functions, not inside the loops. This change brought significant improvements in the
+execution time of the program.
 
-Implementarea mea adapteaza codul de mai sus la matrici ce sunt alocate liniar in 
-memorie si mentine un pointer chiar si pentru matricea rezultat. 
-Deoarece pointerii sunt folositi in mod repetat in calculele din for-uri, acestia
-sunt declarati ca **register**, pentru a se trimite un semnal compilatorului sa ii
-tina in registrele procesorului pentru un acces mult mai rapid. Totusi, pentru a nu
-epuiza registrele de pe CPU, declararile au fost realizate la inceputul functiilor,
-nu in interiorul buclelor. Aceasta modificare a adus imbunatatiri semnificative in
-timpul de executie al programului.
+In addition, in most of the implemented functions, to avoid repeating the calculation
+`i * N`, an auxiliary register `index` was used, to which `N` was added at each iteration
+of the outer for loop.
 
-De asemenea, in majoritatea functiilor implementate, pentru a evita repetarea
-calculului `i * N`, am folosit un registru auxiliar `index`, la care am adunat
-`N` la fiecare iteratie a for-ului exterior.
+## Memory Access
+In all 3 variants, I allocated memory with `calloc`, to ensure that all elements of the
+matrices are initialized to 0. I also freed the memory used for matrices with `free`, to
+avoid memory leaks.
 
-## Memoria
-In toate cele 3 variante, am facut alocari cu `calloc`, pentru a asigura ca toate
-elementele matricilor sunt initializate cu 0. De asemenea, am eliberat memoria
-folosita pentru matrici cu `free`, pentru a evita memory leak-urile.
-
-Pentru a verifica ca nu exista probleme de acces la memorie, s-au rulat cele 3
-executabile cu urmatoarea comanda:
+To check that there are no memory access problems, the 3 executables were run with the
+following command:
 ```
-valgrind --tool=memcheck --leak-check=full ./tema3_varianta ../input/input_valgrind > ../memory/varianta.memory 2>&1
-```
-Rezultatele comenzii sunt disponibile in directorul `memory/`, evidentiindu-se
-faptul ca nu exista probleme de acces la memorie, nici memory leak-uri.
-
-## Cache-ul
-Pentru a analiza informatii legate de accesul la cache, am folosit urmatoarea comanda
-pe toate cele 3 executabile:
-```
-valgrind --tool=cachegrind --branch-sim=yes --cache-sim=yes ./tema3_varianta ../input/input_valgrind > ../cache/varianta.cache 2>&1
+valgrind --tool=memcheck --leak-check=full ./tema3_varianta ../input/input_valgrind > ../memory/version.memory 2>&1
 ```
 
-#### Rezultatele obtinute cu `cachegrind`
+The results of the command are available in the `memory/` directory, highlighting the fact
+that there are no memory access problems or memory leaks.
+
+## Cache Access
+To analyze information related to cache access, I used the following command on all 3
+executables:
+```
+valgrind --tool=cachegrind --branch-sim=yes --cache-sim=yes ./tema3_varianta ../input/input_valgrind > ../cache/version.cache 2>&1
+```
+
+### Results obtained with `cachegrind`
 - `I refs` - Intruction references
 	* tema3_blas: 248,609,027
 	* tema3_neopt: 3,626,867,963
@@ -174,34 +166,42 @@ valgrind --tool=cachegrind --branch-sim=yes --cache-sim=yes ./tema3_varianta ../
 	* tema3_neopt: 503,137
 	* tema3_opt_m: 503,108
 
-#### Interpretarea valorilor
-> Varianta **BLAS** este cea mai eficienta in termeni de referinte la instructiuni si
-> accesari la date, obtinand cele mai mici valori pentru majoritatea metricilor, cu exceptia
-> miss-urilor de cache
- 
-> Din **I refs** si **D refs** se observa ca varianta neoptimizata executa de departe cele 
-> mai multe instructiuni si acceseaza cele mai multe date. Pe de alta parte, varianta
-> optimizata aduce imbunatariri semnificative in acest sens, avand un numar de referinte
-> la instructiuni si de accesari la date de aproape 3 ori mai mic, datorita faptului ca
-> am utilizat pointeri si am folosit registre, nemaiavand nevoie de accesari inutile la 
-> memorie. In timp ce aceste variante aduc numere de ordinul miliardelor, varianta BLAS are 
-> valori de ordinul sutelor de milioane, ceea ce demonstreaza eficienta folosirii functiilor 
-> BLAS.
+#### Values Analysis
+> The **BLAS** variant is the most efficient in terms of instruction references and
+> data accesses, obtaining the lowest values for most metrics, except for cache misses.
 
-> Pentru toate celelalte metrici, varianta optimizata are cam aceleasi valori cu varianta
-> neoptimizata, invingatoare iesind, din nou, varianta BLAS.
+> In **I refs** and **D refs** it can be observed that the unoptimized version executes
+> by far the most instructions and accesses the most data. On the other hand, the 
+> optimized version brings significant improvements in this regard, having a number of
+> instruction references and data accesses almost 3 times lower, due to the fact that
+> I used pointers and registers, no longer needing unnecessary memory accesses.
+> While these variants bring numbers in the billions, the BLAS version has values in
+> the hundreds of millions, which demonstrates the efficiency of using BLAS functions.
 
-## Analiza comparativa a performantei
-grafice!
-	- legenda, unitati de masura
-	- timpi de rulare
-400
-800
-1000
-1200
-1400
+> For all other metrics, the optimized version has almost the same values as the 
+> unoptimized version, the winner being, again, the BLAS version, which also uses
+> algorithms with few and predictable branches, thus reducing the number of branches
+> and mispredictions.
 
-## Resurse:
+## Comparative Performance Analysis
+For performance comparison, I ran the 3 variants on the `haswell` partition, using
+5 tests with different sizes for N: 400, 800, 1000, 1200, 1400. The results are as
+follows:
+![grafic](https://i.ibb.co/m4sLT55/Screenshot-from-2024-05-18-22-44-32.png)
+
+The results obtained are the expected ones: the BLAS version is the fastest, followed
+by the optimized version, and the slowest is the unoptimized version.
+
+The execution time increases almost linearly on the BLAS version, managing to remain
+below 1 second even for N = 1400. On the other hand, the increases in the execution
+times of the other two variants are more abrupt, having a similar slope, reaching
+almost 11 seconds on the optimized implementation and 16 seconds on the unoptimized
+one. We can say that the manual optimization has significantly improved performance,
+but not at the level of the BLAS implementation.
+
+## Resources:
 * [BLAS Quick Reference Guide](https://www.netlib.org/blas/blasqr.pdf)
 * [Laborator 9 - Tehnici de Optimizare de Cod - Inmultirea Matricelor](https://ocw.cs.pub.ro/courses/asc/laboratoare/09)
 * [Tema 3 - ASC](https://ocw.cs.pub.ro/courses/asc/teme/tema3)
+* [Picture URL](https://i.ibb.co/)
+* [Graphic Maker](https://my.visme.co/)
