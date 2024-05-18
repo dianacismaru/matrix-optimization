@@ -3,21 +3,9 @@
  * 2024 Spring
  */
 #include "utils.h"
+#include "helper.h"
 #include <string.h>
 #include <cblas.h>
-
-// Allocate memory for a matrix of size N x N
-double* allocate_matrix(int N) {
-	double *A = (double*) calloc(N * N, sizeof(double));
-
-	// Safety check
-	if (!A) {
-		printf("Memory allocation failed\n");
-		exit(1);
-	}
-
-	return A;
-}
 
 double* my_solver(int N, double *A, double *B) {
 	// Create a copy of B in AtB, to store the result of At * B
