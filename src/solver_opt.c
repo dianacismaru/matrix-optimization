@@ -3,64 +3,29 @@
  * 2024 Spring
  */
 #include "utils.h"
+#include "helper.h"
 
-/*
- * Add your unoptimized implementation here
- */
-
-double* allocate_matrix(int N) {
-	double *A = (double*) calloc(N * N, sizeof(double));
-	if (!A) {
-		printf("Memory allocation failed\n");
-		exit(1);
-	}
-	return A;
-}
-
-/*
-for(i = 0; i < N; i++){
-  double *orig_pa = &a[i][0];
-  for(j = 0; j < N; j++){
-    double *pa = orig_pa;
-    double *pb = &b[0][j];
-    register double suma = 0;
-    for(k = 0; k < N; k++){
-      suma += *pa * *pb;
-      pa++;
-      pb += N;
-    }
-    c[i][j] = suma;
-  }
-}
-*/
-
-// double* multiply_with_transpose(int N, double *A, double *B, double *res) {	
-// 	for (int i = 0; i < N; i++) {
-// 		for (int j = 0; j < N; j++) {
-// 			register double sum = 0;
-// 			for (int k = 0; k < N; k++) {
-// 				sum += A[i * N + k] * B[j * N + k];
-// 			}
-// 			res[i * N + j] = sum;
-// 		}
-// 	}
-
-// 	return res;
-// }
-
+// Multiply a normal matrix with a transposed one
 double* multiply_with_transpose(int N, double *A, double *B, double *res) {
-	for (int i = 0; i < N; i++) {
-		register double *res_ptr = &res[i * N];
-		register double *orig_pa = &A[i * N];
+	register int index = 0;
+	register double sum;
+	register double *res_ptr, *orig_pa, *pa, *pb;
+
+	for (int i = 0; i < N; i++, index += N) {
+		res_ptr = &res[index];
+		orig_pa = &A[index];
+		pb = &B[0];
+
 		for (int j = 0; j < N; j++) {
-			register double sum = 0;
-			register double *pa = orig_pa;
-			register double *pb = &B[j * N];
+			sum = 0.0;
+			pa = orig_pa;
+
 			for (int k = 0; k < N; k++) {
-				sum += *pa * *pb;
+				sum += (*pa) * (*pb);
 				pa++;
 				pb++;
 			}
+
 			res_ptr[j] = sum;
 		}
 	}
@@ -68,17 +33,23 @@ double* multiply_with_transpose(int N, double *A, double *B, double *res) {
 	return res;
 }
 
+// Multiply a lower triangular matrix with a normal one
 double* multiply_lower_triangular(int N, double *L, double *B, double *res) {
-	for (int i = 0; i < N; i++) {
-		register double *orig_pa = &L[i * N];
-		register double *res_ptr = &res[i * N];
+	register int index = 0;
+	register double sum;
+	register double *res_ptr, *orig_pa, *pa, *pb;
+
+	for (int i = 0; i < N; i++, index += N) {
+		orig_pa = &L[index];
+		res_ptr = &res[index];
 
 		for (int j = 0; j < N; j++) {
-			register double *pa = orig_pa;
-			register double *pb = &B[j];
-			register double sum = 0.0;
+			pa = orig_pa;
+			pb = &B[j];
+			sum = 0.0;
+
 			for (int k = 0; k <= i; k++) {
-				sum += *pa * *pb;
+				sum += (*pa) * (*pb);
 				pa++;
 				pb += N;
 			}
@@ -89,16 +60,23 @@ double* multiply_lower_triangular(int N, double *L, double *B, double *res) {
 	return res;
 }
 
+// Multiply a normal matrix with an upper triangular one
 double* multiply_upper_triangular(int N, double *B, double *U, double *res) {
-	for (int i = 0; i < N; i++) {
-		register double *orig_pa = &B[i * N];
-		register double *res_ptr = &res[i * N];
+	register int index = 0;
+	register double sum;
+	register double *res_ptr, *orig_pa, *pa, *pb;
+
+	for (int i = 0; i < N; i++, index += N) {
+		orig_pa = &B[index];
+		res_ptr = &res[index];
+
 		for (int j = 0; j < N; j++) {
-			register double *pa = orig_pa;
-			register double *pb = &U[j];
-			register double sum = 0.0;
+			pa = orig_pa;
+			pb = &U[j];
+			sum = 0.0;
+
 			for (int k = 0; k <= j; k++) {
-				sum += *pa * *pb;
+				sum += (*pa) * (*pb);
 				pa++;
 				pb += N;
 			}
@@ -109,41 +87,44 @@ double* multiply_upper_triangular(int N, double *B, double *U, double *res) {
 	return res;
 }
 
-double* transpose_sup_triangular(int N, double *A, double *At) {
-	for (int i = 0; i < N; i++) {
-		register int index = i * N;
-		register double* At_ptr = &At[index + i];
-		register double* A_ptr = &A[index];
+// Transpose an upper triangular matrix
+double* transpose_upper_triangular(int N, double *A, double *At) {
+	register int index = 0;
+	register double *pa, *pAt;
+
+	for (int i = 0; i < N; i++, index += N) {
+		pa = &At[index + i];
+		pAt = &A[index];
+
 		for (int j = i; j < N; j++) {
-			// At[j * N + i] = A[i * N + j];
-			*At_ptr = A_ptr[j];
-			At_ptr += N;
+			*pa = pAt[j];
+			pa += N;
 		}
 	}
 
 	return At;
 }
 
-
+// Add two matrices
 double* add_matrices(int N, double *A, double *B, double *res) {
-	for (int i = 0; i < N; i++) {
-		register int index = i * N;
-		double *res_ptr = &res[index];
-		double *A_ptr = &A[index];
-		double *B_ptr = &B[index];
+	register int index = 0;
+	register double *res_ptr, *pAt, *pb;
+
+	for (int i = 0; i < N; i++, index += N) {
+		res_ptr = &res[index];
+		pAt = &A[index];
+		pb = &B[index];
+
 		for (int j = 0; j < N; j++) {
-			res_ptr[j] = A_ptr[j] + B_ptr[j]; 
+			res_ptr[j] = pAt[j] + pb[j]; 
 		}
 	}
 
 	return res;
 }
 
-/*
- * C = (At x B + B x A) x Bt
- */
 double* my_solver(int N, double *A, double* B) {
-	double *At = transpose_sup_triangular(N, A, allocate_matrix(N));
+	double *At = transpose_upper_triangular(N, A, allocate_matrix(N));
 	double *AtB = multiply_lower_triangular(N, At, B, allocate_matrix(N));
 	double *BA = multiply_upper_triangular(N, B, A, allocate_matrix(N));
 	double *paranthesis = add_matrices(N, AtB, BA, allocate_matrix(N));
